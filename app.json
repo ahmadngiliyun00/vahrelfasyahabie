@@ -9,7 +9,8 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {
+    "android": {  
+      "package": "com.vahrel.catatcepat",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
