@@ -7,7 +7,6 @@
     "@react-navigation/native": "^7.3.3",
     "@react-navigation/stack": "^7.10.5",
     "expo": "~56.0.12",
-    "expo-av": "^16.0.8",
     "expo-clipboard": "~56.0.4",
     "expo-speech": "~56.0.3",
     "expo-status-bar": "~56.0.4",
