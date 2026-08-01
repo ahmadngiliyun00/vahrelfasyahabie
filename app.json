@@ -1,25 +1,34 @@
 {
   "expo": {
-    "name": "CatatCepat",
-    "slug": "CatatCepat",
+    "name": "GitGud",
+    "slug": "GitGud",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
     "ios": {
       "supportsTablet": true
     },
-    "android": {  
-      "package": "com.vahrel.catatcepat",
+    "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+        "backgroundColor": "#0a0a0f"
+      },
+      "package": "com.vahrelfasyahabie.gitgud"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7a68dbd4-bba4-45e4-8bd2-9c871004165e"
+      }
+    },
+    "owner": "vahrelfasyahabie"
   }
 }
