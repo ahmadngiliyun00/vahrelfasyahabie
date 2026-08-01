@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0a0f"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -24,11 +19,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "7a68dbd4-bba4-45e4-8bd2-9c871004165e"
-      }
-    },
-    "owner": "vahrelfasyahabie"
+    "owner": "universitas-insan-mahardika",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0a0a0f"
+        }
+      ]
+    ]
   }
 }

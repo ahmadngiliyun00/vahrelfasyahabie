@@ -347,11 +347,11 @@ export default function App() {
   );
 }
 
-// 4. STYLE SHEET MURNI REACT NATIVE (Sesuai Batasan UAS)
+// 4. STYLE SHEET MURNI REACT NATIVE (tanpa library styling eksternal)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0f', // Mengikuti palet warna dasar dari dokumen UAS
+    backgroundColor: '#0a0a0f', // Palet warna dasar aplikasi
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6c63ff', // Ungu aksen utama dokumen UAS
+    color: '#6c63ff', // Ungu aksen utama
     letterSpacing: 1,
   },
   card: {

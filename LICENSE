@@ -1,21 +1,46 @@
-The MIT License (MIT)
+Hak Cipta © 2026 Universitas Insan Mahardika.
+Seluruh hak dilindungi undang-undang (All Rights Reserved).
 
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+Perangkat lunak ini beserta seluruh kode sumber, rancangan antarmuka, aset
+visual, dan dokumentasi yang menyertainya ("Ciptaan") merupakan milik
+Universitas Insan Mahardika.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Tanpa izin tertulis terlebih dahulu dari Universitas Insan Mahardika, dilarang
+untuk menggandakan, menyalin, mengubah, menerjemahkan, mengadaptasi,
+mendistribusikan, mengumumkan, menyewakan, memperjualbelikan, atau membuat
+karya turunan dari Ciptaan ini, baik sebagian maupun seluruhnya, dalam bentuk
+dan dengan cara apa pun.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Ciptaan ini dilindungi berdasarkan Undang-Undang Republik Indonesia Nomor 28
+Tahun 2014 tentang Hak Cipta.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Ciptaan ini memuat komponen pihak ketiga (antara lain React Native, Expo, dan
+pustaka sumber terbuka lain) yang tunduk pada lisensi masing-masing. Ketentuan
+di atas berlaku untuk bagian Ciptaan yang dikembangkan oleh Universitas Insan
+Mahardika, bukan untuk komponen pihak ketiga tersebut.
+
+CIPTAAN INI DISEDIAKAN "SEBAGAIMANA ADANYA", TANPA JAMINAN DALAM BENTUK APA
+PUN, BAIK TERSURAT MAUPUN TERSIRAT.
+
+---
+
+Copyright © 2026 Universitas Insan Mahardika. All Rights Reserved.
+
+This software, including all of its source code, interface design, visual
+assets, and accompanying documentation (the "Work"), is the property of
+Universitas Insan Mahardika.
+
+No part of the Work may be reproduced, copied, modified, translated, adapted,
+distributed, published, rented, sold, or used to create derivative works, in
+whole or in part, in any form or by any means, without the prior written
+permission of Universitas Insan Mahardika.
+
+The Work is protected under Law of the Republic of Indonesia Number 28 of 2014
+concerning Copyright.
+
+The Work incorporates third-party components (including React Native, Expo, and
+other open-source libraries) that remain subject to their respective licenses.
+The terms above apply to the portions of the Work developed by Universitas
+Insan Mahardika, not to those third-party components.
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
