@@ -1,721 +1,1572 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  SectionList,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Platform,
-  Modal,
-  ScrollView,
+  View,
 } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import * as Clipboard from 'expo-clipboard';
 
+/* -------------------------------------------------------------------------- */
+/* 1. TOKEN DESAIN                                                            */
+/* -------------------------------------------------------------------------- */
+
 // Palet resmi Universitas Insan Mahardika.
-// Warna utama aplikasi ini mengikuti Program Studi Informatika (kuning emas).
-// Varian "Terang" adalah versi lebih cerah dari warna resmi, dipakai untuk teks
-// di atas latar gelap agar tetap terbaca.
+// Warna utama aplikasi mengikuti Program Studi Informatika (kuning emas);
+// warna program studi lain dipakai sebagai penanda kategori perintah.
 const BRAND = {
-  informatika: '#F0B90B', // Informatika — warna utama
+  informatika: '#F0B90B',
   informatikaTerang: '#FFD75E',
-  fmt: '#FB7A1E', // FMT — aksen sekunder
-  fkes: '#7ED957', // FKES — hijau muda
-  psik: '#3D8B11', // PSIK — hijau
-  kesmasTerang: '#8B5BD6', // KESMAS (dicerahkan)
-  kebidananTerang: '#4DA6FF', // Kebidanan (dicerahkan)
-  rmikTerang: '#E85555', // RMIK (dicerahkan)
-  tinta: '#0a0a0f',
+  fmt: '#FB7A1E',
+  fkes: '#7ED957',
+  psik: '#3D8B11',
+  kesmas: '#8B5BD6',
+  kebidanan: '#4DA6FF',
+  rmik: '#E85555',
+  tinta: '#08080C',
   putih: '#FFFFFF',
 };
 
-// 1. DATA PERINTAH GIT (Dikelompokkan berdasarkan Kategori)
-const GIT_DATA = [
-  {
-    title: '⚙️ INISIALISASI & KONFIGURASI',
-    data: [
-      { command: 'git init', desc: 'Membuat repository Git lokal baru di dalam folder.' },
-      { command: 'git config --global user.name "Nama Anda"', desc: 'Mengatur nama identitas pengguna secara global.' },
-      { command: 'git config --global user.email "email@anda.com"', desc: 'Mengatur email identitas pengguna secara global.' },
-      { command: 'git clone [url]', desc: 'Menyalin repository remote dari internet ke lokal komputer.' },
-    ],
-  },
-  {
-    title: '📝 MEMBUAT PERUBAHAN (STAGING & COMMIT)',
-    data: [
-      { command: 'git status', desc: 'Melihat daftar berkas yang diubah, ditambah, atau siap di-commit.' },
-      { command: 'git add [nama_file]', desc: 'Memasukkan berkas spesifik ke dalam staging area.' },
-      { command: 'git add .', desc: 'Memasukkan semua berkas yang berubah ke dalam staging area.' },
-      { command: 'git commit -m "Pesan commit"', desc: 'Menyimpan perubahan dari staging area ke riwayat Git dengan pesan.' },
-      { command: 'git commit --amend', desc: 'Mengubah pesan atau isi dari commit terakhir.' },
-    ],
-  },
-  {
-    title: '🌿 REKAYASA BRANCH (PERCABANGAN)',
-    data: [
-      { command: 'git branch', desc: 'Menampilkan daftar branch lokal di dalam repository.' },
-      { command: 'git branch [nama_branch]', desc: 'Membuat branch baru dengan nama tertentu.' },
-      { command: 'git checkout [nama_branch]', desc: 'Berpindah ke branch yang dituju.' },
-      { command: 'git checkout -b [nama_branch]', desc: 'Membuat branch baru dan langsung berpindah ke branch tersebut.' },
-      { command: 'git merge [nama_branch]', desc: 'Menggabungkan riwayat branch yang dipilih ke branch aktif saat ini.' },
-      { command: 'git branch -d [nama_branch]', desc: 'Menghapus branch lokal yang sudah tidak digunakan.' },
-    ],
-  },
-  {
-    title: '🌐 REMOTE REPOSITORY & SYNC',
-    data: [
-      { command: 'git remote add origin [url]', desc: 'Menghubungkan repository lokal dengan remote server (GitHub/GitLab).' },
-      { command: 'git push -u origin [nama_branch]', desc: 'Mengirim commit lokal ke remote repository sekaligus mengatur upstream.' },
-      { command: 'git push', desc: 'Mengirim commit lokal ke remote branch yang sudah terhubung.' },
-      { command: 'git pull', desc: 'Mengambil sekaligus menggabungkan (merge) perubahan terbaru dari remote ke lokal.' },
-      { command: 'git fetch', desc: 'Mengambil riwayat perubahan terbaru dari remote tanpa melakukan merge otomatis.' },
-    ],
-  },
-  {
-    title: '⏳ LOG & PEMBATALAN (UNDO)',
-    data: [
-      { command: 'git log --oneline', desc: 'Menampilkan riwayat commit secara ringkas dalam satu baris per commit.' },
-      { command: 'git reset --soft HEAD~1', desc: 'Membatalkan commit terakhir, namun berkas tetap berada di staging area.' },
-      { command: 'git reset --hard HEAD~1', desc: 'Membatalkan commit, staging, dan semua perubahan berkas terakhir secara permanen!' },
-      { command: 'git revert [hash_commit]', desc: 'Membuat commit baru yang isinya membalikkan perubahan dari commit tertentu.' },
-    ],
-  },
-];
+const COLORS = {
+  bg: '#08080C',
+  surface: '#111119',
+  surfaceRaised: '#17171F',
+  border: '#242430',
+  borderSoft: '#1B1B24',
+  text: '#F2F2F7',
+  textMuted: '#8C8CA1',
+  textFaint: '#5C5C73',
+  accent: BRAND.informatika,
+  success: BRAND.psik,
+  danger: BRAND.rmik,
+};
 
-const OTHER_VIEW_DATA = [
+// Font monospace bawaan sistem — tanpa dependensi font tambahan.
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
+
+/* -------------------------------------------------------------------------- */
+/* 2. DATA PERINTAH GIT                                                       */
+/* -------------------------------------------------------------------------- */
+
+const CATEGORIES = [
   {
-    title: '💡 Tips Git Cepat',
-    desc: 'Gunakan `git status` sebelum commit untuk memastikan semua perubahan yang diinginkan sudah siap.',
+    id: 'init',
+    icon: '⚙️',
+    label: 'Inisialisasi',
+    title: 'Inisialisasi & Konfigurasi',
+    color: BRAND.informatika,
   },
   {
-    title: '🔀 Branch Workflow',
-    desc: 'Kerjakan fitur di branch terpisah, lalu merge ke main setelah review untuk menjaga riwayat bersih.',
+    id: 'commit',
+    icon: '📝',
+    label: 'Commit',
+    title: 'Staging & Commit',
+    color: BRAND.fmt,
   },
   {
-    title: '🌐 Sinkronisasi Remote',
-    desc: 'Selalu lakukan `git pull` sebelum `git push` untuk menghindari konflik di remote branch.',
+    id: 'branch',
+    icon: '🌿',
+    label: 'Branch',
+    title: 'Branch & Penggabungan',
+    color: BRAND.fkes,
   },
   {
-    title: '🧹 Housekeeping',
-    desc: 'Hapus branch lokal yang tidak digunakan dengan `git branch -d <nama_branch>` agar repo tetap rapi.',
+    id: 'remote',
+    icon: '🌐',
+    label: 'Remote',
+    title: 'Remote & Sinkronisasi',
+    color: BRAND.kebidanan,
+  },
+  {
+    id: 'history',
+    icon: '⏳',
+    label: 'Riwayat',
+    title: 'Riwayat & Pembatalan',
+    color: BRAND.rmik,
+  },
+  {
+    id: 'inspect',
+    icon: '📦',
+    label: 'Stash',
+    title: 'Stash & Inspeksi',
+    color: BRAND.kesmas,
   },
 ];
 
-// Derived category keys for quick filter
-const CATEGORIES = GIT_DATA.map((s) => s.title);
-export default function App() {
-  const [search, setSearch] = useState('');
-  const [copiedText, setCopiedText] = useState('');
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [currentView, setCurrentView] = useState('commands');
-  const [recentSearches, setRecentSearches] = useState([]);
-  const [filteredCategory, setFilteredCategory] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+const CATEGORY_BY_ID = CATEGORIES.reduce((acc, category) => {
+  acc[category.id] = category;
+  return acc;
+}, {});
 
-  const addRecentSearch = (term) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    setRecentSearches((prev) => {
-      const next = [trimmed, ...prev.filter((item) => item !== trimmed)];
-      return next.slice(0, 6);
-    });
-  };
+const COMMANDS = [
+  // Inisialisasi & konfigurasi
+  {
+    cat: 'init',
+    command: 'git init',
+    desc: 'Membuat repository Git lokal baru di dalam folder saat ini.',
+    tip: 'Jalankan sekali saja di folder proyek. Git akan membuat folder tersembunyi .git sebagai tempat seluruh riwayat disimpan.',
+  },
+  {
+    cat: 'init',
+    command: 'git clone [url]',
+    desc: 'Menyalin repository remote dari internet ke komputer lokal.',
+    tip: 'Folder baru otomatis dibuat sesuai nama repository, dan remote "origin" langsung terpasang.',
+  },
+  {
+    cat: 'init',
+    command: 'git config --global user.name "Nama Anda"',
+    desc: 'Mengatur nama identitas pengguna secara global.',
+    tip: 'Nama ini yang tercatat pada setiap commit. Hilangkan --global bila ingin memakai identitas berbeda hanya di satu repository.',
+  },
+  {
+    cat: 'init',
+    command: 'git config --global user.email "email@anda.com"',
+    desc: 'Mengatur email identitas pengguna secara global.',
+    tip: 'Gunakan email yang sama dengan akun GitHub/GitLab agar kontribusi Anda terhitung di profil.',
+  },
+  {
+    cat: 'init',
+    command: 'git config --list',
+    desc: 'Menampilkan seluruh konfigurasi Git yang sedang berlaku.',
+    tip: 'Berguna untuk memastikan nama dan email sudah benar sebelum commit pertama.',
+  },
 
-  const handleSearchSubmit = () => {
-    addRecentSearch(search);
-  };
+  // Staging & commit
+  {
+    cat: 'commit',
+    command: 'git status',
+    desc: 'Melihat daftar berkas yang diubah, ditambah, atau siap di-commit.',
+    tip: 'Biasakan menjalankan perintah ini sebelum commit untuk memastikan tidak ada berkas yang tertinggal atau ikut terbawa.',
+  },
+  {
+    cat: 'commit',
+    command: 'git add [nama_file]',
+    desc: 'Memasukkan berkas tertentu ke dalam staging area.',
+    tip: 'Staging area adalah ruang tunggu: hanya berkas di dalamnya yang akan ikut pada commit berikutnya.',
+  },
+  {
+    cat: 'commit',
+    command: 'git add .',
+    desc: 'Memasukkan semua berkas yang berubah ke dalam staging area.',
+    tip: 'Praktis, tetapi periksa dulu dengan git status agar berkas rahasia atau sampah build tidak ikut ter-commit.',
+  },
+  {
+    cat: 'commit',
+    command: 'git restore --staged [nama_file]',
+    desc: 'Mengeluarkan kembali berkas dari staging area tanpa membatalkan perubahannya.',
+    tip: 'Pilihan aman ketika salah menjalankan git add — isi berkas tetap utuh.',
+  },
+  {
+    cat: 'commit',
+    command: 'git commit -m "Pesan commit"',
+    desc: 'Menyimpan perubahan dari staging area ke riwayat Git beserta pesannya.',
+    tip: 'Tulis pesan singkat dalam bentuk perintah, misalnya "tambah halaman login", agar riwayat mudah dibaca.',
+  },
+  {
+    cat: 'commit',
+    command: 'git commit --amend',
+    desc: 'Mengubah pesan atau isi dari commit terakhir.',
+    tip: 'Hanya aman selama commit tersebut belum pernah di-push, karena perintah ini menulis ulang riwayat.',
+  },
 
-  const toggleCategory = (cat) => {
-    if (filteredCategory === cat) setFilteredCategory('');
-    else setFilteredCategory(cat);
-  };
+  // Branch & penggabungan
+  {
+    cat: 'branch',
+    command: 'git branch',
+    desc: 'Menampilkan daftar branch lokal di dalam repository.',
+    tip: 'Branch yang sedang aktif ditandai dengan tanda bintang (*) di depannya.',
+  },
+  {
+    cat: 'branch',
+    command: 'git branch [nama_branch]',
+    desc: 'Membuat branch baru dengan nama tertentu.',
+    tip: 'Branch baru dibuat dari commit tempat Anda berdiri sekarang, dan posisi aktif tidak ikut berpindah.',
+  },
+  {
+    cat: 'branch',
+    command: 'git switch [nama_branch]',
+    desc: 'Berpindah ke branch yang dituju.',
+    tip: 'Perintah modern pengganti git checkout untuk urusan berpindah branch, sehingga niatnya lebih jelas.',
+  },
+  {
+    cat: 'branch',
+    command: 'git switch -c [nama_branch]',
+    desc: 'Membuat branch baru sekaligus langsung berpindah ke branch tersebut.',
+    tip: 'Setara dengan git checkout -b. Pakai ini setiap kali memulai fitur baru.',
+  },
+  {
+    cat: 'branch',
+    command: 'git merge [nama_branch]',
+    desc: 'Menggabungkan riwayat branch yang dipilih ke branch yang sedang aktif.',
+    tip: 'Pastikan Anda sudah berada di branch tujuan penggabungan, misalnya main, sebelum menjalankannya.',
+  },
+  {
+    cat: 'branch',
+    command: 'git branch -d [nama_branch]',
+    desc: 'Menghapus branch lokal yang sudah tidak digunakan.',
+    tip: 'Git menolak menghapus bila branch belum di-merge. Gunakan -D hanya bila Anda yakin ingin membuang pekerjaannya.',
+  },
 
-  const openDetailModal = (item) => {
-    setSelectedItem(item);
-    setModalVisible(true);
-  };
+  // Remote & sinkronisasi
+  {
+    cat: 'remote',
+    command: 'git remote add origin [url]',
+    desc: 'Menghubungkan repository lokal dengan remote server (GitHub/GitLab).',
+    tip: '"origin" hanyalah nama panggilan standar untuk remote utama.',
+  },
+  {
+    cat: 'remote',
+    command: 'git remote -v',
+    desc: 'Menampilkan alamat remote yang terhubung dengan repository ini.',
+    tip: 'Langkah pertama saat push gagal: pastikan alamat remote-nya sudah benar.',
+  },
+  {
+    cat: 'remote',
+    command: 'git push -u origin [nama_branch]',
+    desc: 'Mengirim commit lokal ke remote sekaligus mengatur upstream branch.',
+    tip: 'Cukup sekali per branch. Setelah itu git push dan git pull tanpa argumen sudah tahu tujuannya.',
+  },
+  {
+    cat: 'remote',
+    command: 'git push',
+    desc: 'Mengirim commit lokal ke remote branch yang sudah terhubung.',
+    tip: 'Jika ditolak, berarti ada commit baru di remote — jalankan git pull terlebih dahulu.',
+  },
+  {
+    cat: 'remote',
+    command: 'git pull',
+    desc: 'Mengambil sekaligus menggabungkan perubahan terbaru dari remote ke lokal.',
+    tip: 'Sama dengan git fetch yang langsung diikuti git merge.',
+  },
+  {
+    cat: 'remote',
+    command: 'git fetch',
+    desc: 'Mengambil riwayat terbaru dari remote tanpa melakukan merge otomatis.',
+    tip: 'Pilihan aman bila ingin memeriksa dulu apa yang berubah sebelum menggabungkannya.',
+  },
 
-  const closeDetailModal = () => {
-    setModalVisible(false);
-    setSelectedItem(null);
-  };
+  // Riwayat & pembatalan
+  {
+    cat: 'history',
+    command: 'git log --oneline',
+    desc: 'Menampilkan riwayat commit secara ringkas, satu baris per commit.',
+    tip: 'Tambahkan --graph --all untuk melihat percabangan branch dalam bentuk diagram.',
+  },
+  {
+    cat: 'history',
+    command: 'git show [hash_commit]',
+    desc: 'Menampilkan detail dan perubahan berkas dari sebuah commit.',
+    tip: 'Hash cukup ditulis 7 karakter pertama, misalnya git show 443e86d.',
+  },
+  {
+    cat: 'history',
+    command: 'git reset --soft HEAD~1',
+    desc: 'Membatalkan commit terakhir, tetapi berkasnya tetap berada di staging area.',
+    tip: 'Cocok saat pesan commit salah atau ada berkas yang lupa disertakan.',
+  },
+  {
+    cat: 'history',
+    command: 'git reset --hard HEAD~1',
+    desc: 'Membatalkan commit, staging, dan seluruh perubahan berkas terakhir.',
+    tip: 'Perintah paling berbahaya di daftar ini — perubahan yang belum di-commit akan hilang permanen.',
+  },
+  {
+    cat: 'history',
+    command: 'git revert [hash_commit]',
+    desc: 'Membuat commit baru yang membalikkan perubahan dari commit tertentu.',
+    tip: 'Cara aman membatalkan sesuatu yang sudah terlanjur di-push, karena riwayat tidak ditulis ulang.',
+  },
 
-  const removeRecentSearch = (term) => {
-    setRecentSearches((prev) => prev.filter((item) => item !== term));
-  };
+  // Stash & inspeksi
+  {
+    cat: 'inspect',
+    command: 'git diff',
+    desc: 'Melihat perubahan yang belum masuk ke staging area, baris per baris.',
+    tip: 'Gunakan git diff --staged untuk memeriksa isi yang sudah siap di-commit.',
+  },
+  {
+    cat: 'inspect',
+    command: 'git stash',
+    desc: 'Menyimpan sementara perubahan yang belum selesai agar folder kerja kembali bersih.',
+    tip: 'Penyelamat saat harus mendadak berpindah branch di tengah pekerjaan.',
+  },
+  {
+    cat: 'inspect',
+    command: 'git stash pop',
+    desc: 'Mengembalikan perubahan terakhir yang disimpan dan menghapusnya dari daftar stash.',
+    tip: 'Pakai git stash list untuk melihat seluruh simpanan yang masih tersedia.',
+  },
+  {
+    cat: 'inspect',
+    command: 'git blame [nama_file]',
+    desc: 'Menampilkan siapa yang terakhir mengubah setiap baris pada sebuah berkas.',
+    tip: 'Berguna untuk menelusuri asal-usul sebuah baris kode, bukan untuk mencari siapa yang salah.',
+  },
+  {
+    cat: 'inspect',
+    command: 'git clean -fd',
+    desc: 'Menghapus berkas dan folder baru yang belum pernah dilacak Git.',
+    tip: 'Coba dulu dengan -n (git clean -nd) untuk melihat daftar yang akan dihapus tanpa benar-benar menghapusnya.',
+  },
+];
 
-  const clearRecentSearches = () => {
-    setRecentSearches([]);
-  };
+const WORKFLOW = [
+  {
+    step: '01',
+    title: 'Mulai dari kondisi terbaru',
+    desc: 'Tarik perubahan rekan tim sebelum menulis kode agar konflik tidak menumpuk.',
+    command: 'git pull',
+  },
+  {
+    step: '02',
+    title: 'Kerjakan di branch sendiri',
+    desc: 'Satu fitur satu branch. Branch main tetap bersih dan selalu siap dijalankan.',
+    command: 'git switch -c fitur/login',
+  },
+  {
+    step: '03',
+    title: 'Periksa sebelum menyimpan',
+    desc: 'Pastikan hanya berkas yang Anda maksud yang ikut masuk ke dalam commit.',
+    command: 'git status',
+  },
+  {
+    step: '04',
+    title: 'Simpan dengan pesan jelas',
+    desc: 'Pesan commit yang deskriptif membuat riwayat proyek bisa dibaca berbulan-bulan kemudian.',
+    command: 'git commit -m "tambah halaman login"',
+  },
+  {
+    step: '05',
+    title: 'Kirim dan ajukan review',
+    desc: 'Push branch Anda, lalu buka pull request agar perubahan bisa ditinjau rekan tim.',
+    command: 'git push -u origin fitur/login',
+  },
+];
 
-  // 2. LOGIKA FILTER SEARCH (Real-time Filter)
-  const filteredGitData = useMemo(() => {
-    const term = search.trim().toLowerCase();
+const TIPS = [
+  {
+    icon: '🧭',
+    title: 'Tersesat? Lihat peta dulu',
+    desc: 'git status dan git log --oneline --graph menjawab hampir semua pertanyaan "saya ada di mana dan apa yang terjadi".',
+  },
+  {
+    icon: '🛟',
+    title: 'Batalkan dengan aman',
+    desc: 'Gunakan git revert untuk commit yang sudah di-push, dan git reset hanya untuk commit yang masih ada di komputer sendiri.',
+  },
+  {
+    icon: '🧹',
+    title: 'Rapikan branch lama',
+    desc: 'Hapus branch yang sudah di-merge dengan git branch -d agar daftar branch tetap ringkas dan mudah dibaca.',
+  },
+  {
+    icon: '🚫',
+    title: 'Jangan commit rahasia',
+    desc: 'Masukkan berkas .env, kunci API, dan folder build ke dalam .gitignore sebelum commit pertama dibuat.',
+  },
+];
 
-    // start from base sections, optionally restrict to category
-    const base = filteredCategory ? GIT_DATA.filter((s) => s.title === filteredCategory) : GIT_DATA;
+const TOTAL_COMMANDS = COMMANDS.length;
 
-    if (!term) return base;
+/* -------------------------------------------------------------------------- */
+/* 3. KOMPONEN KECIL                                                          */
+/* -------------------------------------------------------------------------- */
 
-    return base
-      .map((section) => {
-        const filteredItems = section.data.filter(
-          (item) => item.command.toLowerCase().includes(term) || item.desc.toLowerCase().includes(term)
+function SegmentedControl({ value, onChange, options }) {
+  return (
+    <View style={styles.segment}>
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => [
+              styles.segmentItem,
+              active && styles.segmentItemActive,
+              pressed && !active && styles.pressedSoft,
+            ]}
+            onPress={() => onChange(option.value)}
+          >
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{option.label}</Text>
+          </Pressable>
         );
-        return { ...section, data: filteredItems };
-      })
-      .filter((section) => section.data.length > 0);
-  }, [search, filteredCategory]);
+      })}
+    </View>
+  );
+}
 
-  // 3. LOGIKA ONE-TAP COPY TO CLIPBOARD
-  const handleCopy = async (command) => {
-    await Clipboard.setStringAsync(command);
-    setCopiedText(command);
-    setNotificationVisible(true);
+function CommandCard({ item, color, onPress, onCopy }) {
+  return (
+    <View style={styles.cardWrapper}>
+      <View style={[styles.cardRail, { backgroundColor: color }]} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Detail perintah ${item.command}`}
+        style={({ pressed }) => [styles.card, pressed && styles.pressedSoft]}
+        onPress={onPress}
+        onLongPress={onCopy}
+        delayLongPress={250}
+      >
+        <Text style={styles.cardCommand} numberOfLines={2}>
+          {item.command}
+        </Text>
+        <Text style={styles.cardDesc}>{item.desc}</Text>
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardHint}>Ketuk untuk detail</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Salin ${item.command}`}
+            hitSlop={8}
+            style={({ pressed }) => [styles.copyButton, pressed && styles.copyButtonPressed]}
+            onPress={onCopy}
+          >
+            <Text style={styles.copyButtonText}>Salin</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
 
-    // Notifikasi melayang otomatis hilang dalam 2 detik
-    setTimeout(() => {
-      setNotificationVisible(false);
-    }, 2000);
-  };
+function DetailSheet({ visible, item, onClose, onCopy }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (!visible) return;
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [visible, anim]);
+
+  const category = item ? CATEGORY_BY_ID[item.cat] : null;
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0f" />
-
-      {/* BANNER ESTETIK TERMINAL */}
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>SYSTEM BOOTING...</Text>
-        <Text style={styles.bannerText}>WELCOME TO GITGUD HACKER SHELL</Text>
-        <Text style={styles.bannerSmall}>[ ready ]</Text>
-      </View>
-
-      {/* TERMINAL HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>~/gitgud $ cheat-sheet</Text>
-        <Text style={styles.headerSubtitle}>Tap perintah untuk menyalin ke clipboard</Text>
-      </View>
-
-      {/* SEARCH BAR (TERMINAL INPUT SYTLE) */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.switchButton, currentView === 'commands' && styles.switchButtonActive]}
-          onPress={() => setCurrentView('commands')}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={styles.sheetOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Tutup detail" onPress={onClose} />
+        <Animated.View
+          style={[
+            styles.sheet,
+            { paddingBottom: 24 + insets.bottom, opacity: anim, transform: [{ translateY }] },
+          ]}
         >
-          <Text style={[styles.switchButtonText, currentView === 'commands' && styles.switchButtonTextActive]}>
-            Daftar Perintah
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.switchButton, currentView === 'tips' && styles.switchButtonActive]}
-          onPress={() => setCurrentView('tips')}
-        >
-          <Text style={[styles.switchButtonText, currentView === 'tips' && styles.switchButtonTextActive]}>
-            Tampilan Lain
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.sheetHandle} />
+          {item && category ? (
+            <>
+              <View style={[styles.sheetBadge, { borderColor: category.color }]}>
+                <Text style={[styles.sheetBadgeText, { color: category.color }]}>
+                  {category.icon}  {category.title}
+                </Text>
+              </View>
+
+              <View style={styles.sheetCommandBox}>
+                <Text style={styles.sheetPrompt}>$</Text>
+                <Text style={styles.sheetCommand} selectable>
+                  {item.command}
+                </Text>
+              </View>
+
+              <Text style={styles.sheetDesc}>{item.desc}</Text>
+
+              {item.tip ? (
+                <View style={styles.sheetTip}>
+                  <Text style={styles.sheetTipLabel}>CATATAN</Text>
+                  <Text style={styles.sheetTipText}>{item.tip}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.sheetActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.sheetGhostButton, pressed && styles.pressedSoft]}
+                  onPress={onClose}
+                >
+                  <Text style={styles.sheetGhostText}>Tutup</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.sheetPrimaryButton, pressed && styles.sheetPrimaryPressed]}
+                  onPress={() => onCopy(item.command)}
+                >
+                  <Text style={styles.sheetPrimaryText}>Salin perintah</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : null}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function Toast({ anim, message, tone, bottomInset }) {
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] });
+  const accent = tone === 'error' ? COLORS.danger : COLORS.success;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.toast,
+        {
+          bottom: 20 + bottomInset,
+          borderColor: accent,
+          opacity: anim,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
+      <Text style={[styles.toastIcon, { color: accent }]}>{tone === 'error' ? '✕' : '✓'}</Text>
+      <Text style={styles.toastText} numberOfLines={2}>
+        {message}
+      </Text>
+    </Animated.View>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 4. LAYAR UTAMA                                                             */
+/* -------------------------------------------------------------------------- */
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <GitGudScreen />
+    </SafeAreaProvider>
+  );
+}
+
+function GitGudScreen() {
+  const insets = useSafeAreaInsets();
+  const [view, setView] = useState('commands');
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('');
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  const [toast, setToast] = useState({ message: '', tone: 'success', mounted: false });
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef(null);
+  const listRef = useRef(null);
+
+  // Bersihkan timer agar tidak ada pembaruan state setelah komponen dilepas.
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    []
+  );
+
+  const showToast = useCallback(
+    (message, tone = 'success') => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      setToast({ message, tone, mounted: true });
+      toastAnim.stopAnimation();
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+
+      toastTimer.current = setTimeout(() => {
+        Animated.timing(toastAnim, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (finished) setToast((prev) => ({ ...prev, mounted: false }));
+        });
+      }, 1900);
+    },
+    [toastAnim]
+  );
+
+  // Salin perintah ke papan klip dengan satu ketuk.
+  const handleCopy = useCallback(
+    async (command) => {
+      try {
+        await Clipboard.setStringAsync(command);
+        showToast(`Disalin: ${command}`);
+      } catch (error) {
+        showToast('Gagal menyalin ke papan klip', 'error');
+      }
+    },
+    [showToast]
+  );
+
+  const addRecentSearch = useCallback((term) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches((prev) => [trimmed, ...prev.filter((entry) => entry !== trimmed)].slice(0, 6));
+  }, []);
+
+  const openDetail = useCallback((item) => {
+    setSelectedItem(item);
+    setSheetVisible(true);
+  }, []);
+
+  // Item sengaja tidak dikosongkan agar isinya tidak berkedip saat animasi tutup.
+  const closeDetail = useCallback(() => setSheetVisible(false), []);
+
+  const copyFromSheet = useCallback(
+    (command) => {
+      setSheetVisible(false);
+      handleCopy(command);
+    },
+    [handleCopy]
+  );
+
+  const resetFilters = useCallback(() => {
+    setSearch('');
+    setActiveCategory('');
+  }, []);
+
+  // Pencarian langsung: menyaring perintah maupun deskripsinya sambil mengetik.
+  const sections = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return CATEGORIES.filter((category) => !activeCategory || category.id === activeCategory)
+      .map((category) => ({
+        ...category,
+        data: COMMANDS.filter(
+          (item) =>
+            item.cat === category.id &&
+            (!term ||
+              item.command.toLowerCase().includes(term) ||
+              item.desc.toLowerCase().includes(term))
+        ),
+      }))
+      .filter((section) => section.data.length > 0);
+  }, [search, activeCategory]);
+
+  const resultCount = useMemo(
+    () => sections.reduce((total, section) => total + section.data.length, 0),
+    [sections]
+  );
+
+  // Hasil saringan selalu dibaca dari awal, bukan dari posisi gulir sebelumnya.
+  useEffect(() => {
+    listRef.current?.getScrollResponder?.()?.scrollTo?.({ y: 0, animated: false });
+  }, [search, activeCategory]);
+
+  const isFiltering = search.trim().length > 0 || activeCategory !== '';
+  const showRecent = recentSearches.length > 0 && search.trim().length === 0;
+
+  const renderItem = useCallback(
+    ({ item, section }) => (
+      <CommandCard
+        item={item}
+        color={section.color}
+        onPress={() => openDetail(item)}
+        onCopy={() => handleCopy(item.command)}
+      />
+    ),
+    [handleCopy, openDetail]
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }) => (
+      <View style={styles.sectionHeader}>
+        <View style={[styles.sectionDot, { backgroundColor: section.color }]} />
+        <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+        <Text style={styles.sectionCount}>{section.data.length}</Text>
+      </View>
+    ),
+    []
+  );
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar style="light" backgroundColor={COLORS.bg} />
+
+      {/* KEPALA APLIKASI */}
+      <View style={styles.appBar}>
+        <View style={styles.logo}>
+          <Text style={styles.logoText}>$_</Text>
+        </View>
+        <View style={styles.appBarTitles}>
+          <Text style={styles.appTitle}>Git Gud</Text>
+          <Text style={styles.appSubtitle}>Cheat sheet perintah Git</Text>
+        </View>
+        <View style={styles.counterChip}>
+          <Text style={styles.counterValue}>{TOTAL_COMMANDS}</Text>
+          <Text style={styles.counterLabel}>perintah</Text>
+        </View>
       </View>
 
-      {currentView === 'commands' ? (
+      <View style={styles.segmentWrapper}>
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'commands', label: 'Perintah' },
+            { value: 'guide', label: 'Panduan' },
+          ]}
+        />
+      </View>
+
+      {view === 'commands' ? (
         <>
-          <View style={styles.searchContainer}>
-            <Text style={styles.promptSymbol}>&gt;</Text>
+          {/* PENCARIAN */}
+          <View style={styles.searchBar}>
+            <Text style={styles.searchPrompt}>›</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Cari perintah atau deskripsi..."
-              placeholderTextColor="#5a5a72"
+              placeholder="Cari perintah atau deskripsi…"
+              placeholderTextColor={COLORS.textFaint}
               value={search}
               onChangeText={setSearch}
-              onSubmitEditing={handleSearchSubmit}
+              onSubmitEditing={() => addRecentSearch(search)}
               returnKeyType="search"
               autoCapitalize="none"
               autoCorrect={false}
+              selectionColor={COLORS.accent}
             />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')} style={styles.clearButton}>
-                <Text style={styles.clearButtonText}>✖</Text>
-              </TouchableOpacity>
-            )}
+            {search.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Bersihkan pencarian"
+                hitSlop={10}
+                style={styles.searchClear}
+                onPress={() => setSearch('')}
+              >
+                <Text style={styles.searchClearText}>✕</Text>
+              </Pressable>
+            ) : null}
           </View>
 
-          {recentSearches.length > 0 && (
-            <View style={styles.recentSearchesContainer}>
-              <View style={styles.recentSearchesHeader}>
-                <Text style={styles.sectionHeaderTitle}>🔎 Recent Searches</Text>
-                <TouchableOpacity onPress={clearRecentSearches} style={styles.clearHistoryButton}>
-                  <Text style={styles.clearHistoryText}>Clear All</Text>
-                </TouchableOpacity>
+          {/* RIWAYAT PENCARIAN */}
+          {showRecent ? (
+            <View style={styles.recentBlock}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.recentLabel}>PENCARIAN TERAKHIR</Text>
+                <Pressable hitSlop={8} onPress={() => setRecentSearches([])}>
+                  <Text style={styles.recentClearAll}>Hapus semua</Text>
+                </Pressable>
               </View>
-              <View style={styles.recentSearchesRow}>
-                {recentSearches.map((term, index) => (
-                  <View key={`${term}-${index}`} style={styles.recentSearchChipWrapper}>
-                    <TouchableOpacity
-                      style={styles.recentSearchChip}
-                      onPress={() => {
-                        setSearch(term);
-                      }}
+              <View style={styles.recentRow}>
+                {recentSearches.map((term) => (
+                  <View key={term} style={styles.recentChip}>
+                    <Pressable hitSlop={6} onPress={() => setSearch(term)}>
+                      <Text style={styles.recentChipText}>{term}</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityLabel={`Hapus riwayat ${term}`}
+                      hitSlop={8}
+                      onPress={() =>
+                        setRecentSearches((prev) => prev.filter((entry) => entry !== term))
+                      }
                     >
-                      <Text style={styles.recentSearchText}>{term}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => removeRecentSearch(term)}
-                      style={styles.removeRecentSearchButton}
-                    >
-                      <Text style={styles.removeRecentSearchText}>✕</Text>
-                    </TouchableOpacity>
+                      <Text style={styles.recentChipRemove}>✕</Text>
+                    </Pressable>
                   </View>
                 ))}
               </View>
             </View>
-          )}
+          ) : null}
 
-          {/* QUICK FILTER CATEGORY TABS */}
-          <View style={styles.categoryRowContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[styles.categoryChip, filteredCategory === cat && styles.categoryChipActive]}
-                  onPress={() => toggleCategory(cat)}
-                >
-                  <Text style={[styles.categoryChipText, filteredCategory === cat && styles.categoryChipTextActive]}>{cat}</Text>
-                </TouchableOpacity>
-              ))}
+          {/* SARINGAN KATEGORI */}
+          <View style={styles.filterRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.filterContent}
+            >
+              <Pressable
+                style={[styles.filterChip, !activeCategory && styles.filterChipActive]}
+                onPress={() => setActiveCategory('')}
+              >
+                <Text style={[styles.filterChipText, !activeCategory && styles.filterChipTextActive]}>
+                  Semua
+                </Text>
+              </Pressable>
+              {CATEGORIES.map((category) => {
+                const active = activeCategory === category.id;
+                return (
+                  <Pressable
+                    key={category.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[
+                      styles.filterChip,
+                      active && { backgroundColor: category.color, borderColor: category.color },
+                    ]}
+                    onPress={() => setActiveCategory(active ? '' : category.id)}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {category.icon}  {category.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
 
+          {isFiltering ? (
+            <Text style={styles.resultLine}>
+              {resultCount} dari {TOTAL_COMMANDS} perintah
+            </Text>
+          ) : null}
+
+          {/* DAFTAR PERINTAH */}
           <SectionList
-            sections={filteredGitData}
-            keyExtractor={(item, index) => item.command + index}
-            renderSectionHeader={({ section: { title } }) => (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderTitle}>{title}</Text>
-              </View>
-            )}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.card}
-                onPress={() => openDetailModal(item)}
-                onLongPress={() => handleCopy(item.command)}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.commandText}>{item.command}</Text>
-                  <Text style={styles.copyBadge}>copy</Text>
-                </View>
-                <Text style={styles.descText}>{item.desc}</Text>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.listContent}
+            ref={listRef}
+            sections={sections}
+            keyExtractor={(item) => `${item.cat}:${item.command}`}
+            renderItem={renderItem}
+            renderSectionHeader={renderSectionHeader}
+            stickySectionHeadersEnabled
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 96 + insets.bottom }]}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>[!] Perintah tidak ditemukan.</Text>
+              <View style={styles.empty}>
+                <Text style={styles.emptyIcon}>🔍</Text>
+                <Text style={styles.emptyTitle}>Perintah tidak ditemukan</Text>
+                <Text style={styles.emptyDesc}>
+                  Coba kata kunci lain, atau bersihkan saringan yang sedang aktif.
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.emptyButton, pressed && styles.pressedSoft]}
+                  onPress={resetFilters}
+                >
+                  <Text style={styles.emptyButtonText}>Bersihkan saringan</Text>
+                </Pressable>
               </View>
             }
           />
         </>
       ) : (
-        <View style={styles.otherViewContainer}>
-          <Text style={styles.otherViewTitle}>Tampilan Lain</Text>
-          {OTHER_VIEW_DATA.map((item, index) => (
-            <View key={index} style={styles.otherViewCard}>
-              <Text style={styles.otherViewCardTitle}>{item.title}</Text>
-              <Text style={styles.otherViewCardDesc}>{item.desc}</Text>
+        /* TAMPILAN PANDUAN */
+        <ScrollView
+          style={styles.guide}
+          contentContainerStyle={[styles.guideContent, { paddingBottom: 96 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.guideHeading}>Alur kerja harian</Text>
+          <Text style={styles.guideLead}>
+            Lima langkah yang menutup hampir seluruh pekerjaan Git sehari-hari. Ketuk perintahnya
+            untuk menyalin.
+          </Text>
+
+          {WORKFLOW.map((entry, index) => (
+            <View key={entry.step} style={styles.stepRow}>
+              <View style={styles.stepGutter}>
+                <View style={styles.stepBullet}>
+                  <Text style={styles.stepBulletText}>{entry.step}</Text>
+                </View>
+                {index < WORKFLOW.length - 1 ? <View style={styles.stepLine} /> : null}
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>{entry.title}</Text>
+                <Text style={styles.stepDesc}>{entry.desc}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Salin ${entry.command}`}
+                  style={({ pressed }) => [styles.stepCommand, pressed && styles.pressedSoft]}
+                  onPress={() => handleCopy(entry.command)}
+                >
+                  <Text style={styles.stepCommandText} numberOfLines={1}>
+                    {entry.command}
+                  </Text>
+                  <Text style={styles.stepCommandCopy}>Salin</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
-        </View>
+
+          <Text style={[styles.guideHeading, styles.guideHeadingSpaced]}>Tips singkat</Text>
+          {TIPS.map((tip) => (
+            <View key={tip.title} style={styles.tipCard}>
+              <Text style={styles.tipIcon}>{tip.icon}</Text>
+              <View style={styles.tipBody}>
+                <Text style={styles.tipTitle}>{tip.title}</Text>
+                <Text style={styles.tipDesc}>{tip.desc}</Text>
+              </View>
+            </View>
+          ))}
+
+          <Text style={styles.guideFooter}>Universitas Insan Mahardika · Git Gud v1.0.0</Text>
+        </ScrollView>
       )}
 
-      {/* TOAST / NOTIFIKASI KUSTOM MELAYANG */}
-      {/* DETAIL MODAL */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={closeDetailModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {selectedItem && (
-              <>
-                <Text style={styles.modalTitle}>Detail Perintah</Text>
-                <Text style={styles.modalCommand}>{selectedItem.command}</Text>
-                <Text style={styles.modalDesc}>{selectedItem.desc}</Text>
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity style={styles.modalButton} onPress={() => { handleCopy(selectedItem.command); closeDetailModal(); }}>
-                    <Text style={styles.modalButtonText}>Copy</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalButton, { marginLeft: 8 }]} onPress={closeDetailModal}>
-                    <Text style={styles.modalButtonText}>Close</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
-      {notificationVisible && (
-        <View style={styles.notification}>
-          <Text style={styles.notificationText}>
-            ✓ Berhasil disalin:{' '}
-            <Text style={styles.notificationCode}>{copiedText}</Text>
-          </Text>
-        </View>
-      )}
-    </SafeAreaView>
+      <DetailSheet
+        visible={sheetVisible}
+        item={selectedItem}
+        onClose={closeDetail}
+        onCopy={copyFromSheet}
+      />
+
+      {toast.mounted ? (
+        <Toast
+          anim={toastAnim}
+          message={toast.message}
+          tone={toast.tone}
+          bottomInset={insets.bottom}
+        />
+      ) : null}
+    </View>
   );
 }
 
-// 4. STYLE SHEET MURNI REACT NATIVE (tanpa library styling eksternal)
+/* -------------------------------------------------------------------------- */
+/* 5. GAYA (STYLESHEET MURNI REACT NATIVE)                                    */
+/* -------------------------------------------------------------------------- */
+
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#0a0a0f', // Palet warna dasar aplikasi
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: COLORS.bg,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a3a',
+  pressedSoft: {
+    opacity: 0.65,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: BRAND.fkes, // Hijau FKES sebagai aksen terminal
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#9090a8',
-    marginTop: 4,
-  },
-  searchContainer: {
+
+  /* Kepala aplikasi */
+  appBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111118',
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-    paddingHorizontal: 12,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 16,
   },
-  promptSymbol: {
-    color: BRAND.fmt, // Oranye FMT sebagai simbol prompt
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  logo: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontFamily: MONO,
+    fontSize: 17,
+    fontWeight: '700',
+    color: BRAND.tinta,
+  },
+  appBarTitles: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  appSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  counterChip: {
+    alignItems: 'flex-end',
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border,
+    paddingLeft: 12,
+  },
+  counterValue: {
+    fontFamily: MONO,
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.accent,
+  },
+  counterLabel: {
+    fontSize: 10,
+    color: COLORS.textFaint,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+
+  /* Sakelar tampilan */
+  segmentWrapper: {
+    paddingHorizontal: 20,
+  },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.borderSoft,
+    padding: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 9,
+    alignItems: 'center',
+  },
+  segmentItemActive: {
+    backgroundColor: COLORS.surfaceRaised,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  segmentTextActive: {
+    color: COLORS.text,
+  },
+
+  /* Pencarian */
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+  },
+  searchPrompt: {
+    fontFamily: MONO,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.accent,
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    height: 44,
-    color: '#e8e8f0',
+    height: 46,
     fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    color: COLORS.text,
+    padding: 0,
   },
-  clearButton: {
-    padding: 4,
+  searchClear: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  clearButtonText: {
-    color: '#5a5a72',
-    fontSize: 12,
+  searchClearText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 80, // Ruang ekstra agar tidak tertutup notifikasi
+
+  /* Riwayat pencarian */
+  recentBlock: {
+    marginHorizontal: 20,
+    marginTop: 14,
   },
-  sectionHeader: {
-    backgroundColor: '#0a0a0f',
-    paddingVertical: 12,
-    marginTop: 12,
-  },
-  sectionHeaderTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: BRAND.fmt, // Oranye FMT untuk judul kategori
-    letterSpacing: 1,
-  },
-  card: {
-    backgroundColor: '#1a1a24',
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 10,
-  },
-  cardHeader: {
+  recentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
   },
-  commandText: {
-    fontSize: 14,
+  recentLabel: {
+    fontSize: 10,
     fontWeight: '700',
-    color: BRAND.informatika, // Kuning Informatika untuk kode perintah
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    flex: 1,
-    marginRight: 8,
+    letterSpacing: 1,
+    color: COLORS.textFaint,
   },
-  copyBadge: {
-    fontSize: 10,
-    color: '#5a5a72',
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    textTransform: 'uppercase',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  recentClearAll: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.accent,
   },
-  descText: {
-    fontSize: 13,
-    color: '#9090a8',
-    lineHeight: 18,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  emptyText: {
-    color: BRAND.rmikTerang, // Merah RMIK sebagai peringatan
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    fontSize: 13,
-  },
-  banner: {
-    backgroundColor: '#05060d',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#191a23',
-  },
-  bannerText: {
-    color: BRAND.kebidananTerang,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    fontSize: 12,
-    letterSpacing: 0.7,
-  },
-  bannerSmall: {
-    color: BRAND.kesmasTerang,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    fontSize: 10,
-    marginTop: 4,
-  },
-  recentSearchesContainer: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  recentSearchesRow: {
+  recentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 8,
   },
-  categoryRowContainer: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  categoryRow: {
+  recentChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-  },
-  categoryChip: {
-    backgroundColor: '#0f1724',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: '#2a2a3a',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: COLORS.border,
     borderRadius: 999,
-    marginRight: 10,
-  },
-  categoryChipActive: {
-    backgroundColor: BRAND.informatika,
-    borderColor: BRAND.informatika,
-  },
-  categoryChipText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-  },
-  categoryChipTextActive: {
-    // Teks gelap di atas chip kuning agar kontrasnya tetap tinggi
-    color: BRAND.tinta,
-    fontWeight: '700',
-  },
-  recentSearchesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  clearHistoryButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    backgroundColor: '#2a2a3a',
-  },
-  clearHistoryText: {
-    color: BRAND.informatikaTerang,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  recentSearchChipWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingLeft: 12,
+    paddingRight: 9,
+    paddingVertical: 6,
     marginRight: 8,
     marginBottom: 8,
   },
-  recentSearchChip: {
-    backgroundColor: '#1f2937',
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-  },
-  removeRecentSearchButton: {
-    marginLeft: 6,
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    backgroundColor: '#111118',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeRecentSearchText: {
-    color: BRAND.rmikTerang,
+  recentChipText: {
+    fontFamily: MONO,
     fontSize: 12,
+    color: COLORS.text,
+  },
+  recentChipRemove: {
+    fontSize: 10,
+    color: COLORS.textFaint,
+    marginLeft: 8,
+  },
+
+  /* Saringan kategori */
+  filterRow: {
+    marginTop: 14,
+  },
+  filterContent: {
+    paddingHorizontal: 20,
+    paddingRight: 12,
+  },
+  filterChip: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  filterChipTextActive: {
+    color: BRAND.tinta,
     fontWeight: '700',
   },
-  recentSearchText: {
-    color: '#e2e8f0',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  resultLine: {
+    marginTop: 12,
     marginHorizontal: 20,
-    marginTop: 16,
+    fontSize: 11,
+    color: COLORS.textFaint,
+    fontFamily: MONO,
   },
-  switchButton: {
-    flex: 1,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-    backgroundColor: '#111118',
+
+  /* Daftar & judul kategori */
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 96,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.bg,
+    paddingTop: 18,
+    paddingBottom: 10,
   },
-  switchButtonActive: {
-    backgroundColor: '#1f2937',
-    borderColor: BRAND.informatika,
+  sectionDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 8,
   },
-  switchButtonText: {
-    color: '#9ca3af',
+  sectionTitle: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    color: COLORS.textMuted,
+  },
+  sectionCount: {
+    fontFamily: MONO,
+    fontSize: 11,
+    color: COLORS.textFaint,
+  },
+
+  /* Kartu perintah */
+  cardWrapper: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderSoft,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  cardRail: {
+    width: 3,
+  },
+  card: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  cardCommand: {
+    fontFamily: MONO,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: COLORS.accent,
+    lineHeight: 20,
+  },
+  cardDesc: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  cardHint: {
+    fontSize: 11,
+    color: COLORS.textFaint,
+  },
+  copyButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceRaised,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  copyButtonPressed: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+  copyButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: COLORS.text,
+  },
+
+  /* Kondisi kosong */
+  empty: {
+    alignItems: 'center',
+    paddingTop: 64,
+    paddingHorizontal: 24,
+  },
+  emptyIcon: {
+    fontSize: 30,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  emptyButton: {
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  emptyButtonText: {
     fontSize: 13,
     fontWeight: '700',
+    color: COLORS.accent,
   },
-  switchButtonTextActive: {
-    color: '#ffffff',
+
+  /* Panduan */
+  guide: {
+    flex: 1,
   },
-  otherViewContainer: {
+  guideContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 80,
+    paddingTop: 22,
+    paddingBottom: 96,
   },
-  otherViewTitle: {
+  guideHeading: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 16,
+    color: COLORS.text,
   },
-  otherViewCard: {
-    backgroundColor: '#15151b',
-    borderColor: '#2a2a3a',
+  guideHeadingSpaced: {
+    marginTop: 26,
+    marginBottom: 14,
+  },
+  guideLead: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+    marginTop: 6,
+    marginBottom: 20,
+  },
+  stepRow: {
+    flexDirection: 'row',
+  },
+  stepGutter: {
+    alignItems: 'center',
+    width: 34,
+  },
+  stepBullet: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  otherViewCardTitle: {
+  stepBulletText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.accent,
+  },
+  stepLine: {
+    flex: 1,
+    width: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 4,
+  },
+  stepBody: {
+    flex: 1,
+    marginLeft: 12,
+    paddingBottom: 20,
+  },
+  stepTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: BRAND.kesmasTerang,
-    marginBottom: 6,
+    color: COLORS.text,
+    marginTop: 5,
   },
-  otherViewCardDesc: {
+  stepDesc: {
     fontSize: 13,
-    color: '#c7c7d4',
-    lineHeight: 18,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+    marginTop: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: '#0b0b10',
-    borderRadius: 12,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#2a2a3a',
-  },
-  modalTitle: {
-    color: BRAND.informatikaTerang,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  modalCommand: {
-    color: BRAND.informatika,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  modalDesc: {
-    color: '#c7c7d4',
-    marginBottom: 12,
-  },
-  modalButtons: {
+  stepCommand: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalButton: {
-    backgroundColor: '#1f2937',
-    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 10,
   },
-  modalButtonText: {
-    color: '#e2e8f0',
+  stepCommandText: {
+    flex: 1,
+    fontFamily: MONO,
+    fontSize: 12,
+    color: COLORS.accent,
+    marginRight: 10,
+  },
+  stepCommandCopy: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: COLORS.textFaint,
+    textTransform: 'uppercase',
+  },
+  tipCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderSoft,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  tipIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  tipBody: {
+    flex: 1,
+  },
+  tipTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  tipDesc: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  guideFooter: {
+    marginTop: 24,
+    textAlign: 'center',
+    fontSize: 11,
+    color: COLORS.textFaint,
+  },
+
+  /* Lembar detail */
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(4, 4, 8, 0.72)',
+  },
+  sheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    marginBottom: 18,
+  },
+  sheetBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  sheetBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
   },
-  notification: {
-    position: 'absolute',
-    bottom: 24,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(61, 139, 17, 0.97)', // Hijau PSIK sebagai notifikasi sukses
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+  sheetCommandBox: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginTop: 14,
   },
-  notificationText: {
-    color: '#ffffff',
+  sheetPrompt: {
+    fontFamily: MONO,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textFaint,
+    marginRight: 10,
+  },
+  sheetCommand: {
+    flex: 1,
+    fontFamily: MONO,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.accent,
+    lineHeight: 21,
+  },
+  sheetDesc: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 21,
+    marginTop: 16,
+  },
+  sheetTip: {
+    backgroundColor: COLORS.surfaceRaised,
+    borderRadius: 12,
+    padding: 13,
+    marginTop: 14,
+  },
+  sheetTipLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: COLORS.textFaint,
+    marginBottom: 5,
+  },
+  sheetTipText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 19,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    marginTop: 22,
+  },
+  sheetGhostButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 10,
+  },
+  sheetGhostText: {
     fontSize: 13,
     fontWeight: '600',
-    textAlign: 'center',
+    color: COLORS.textMuted,
   },
-  notificationCode: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    fontWeight: 'bold',
-    color: '#111118',
+  sheetPrimaryButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderRadius: 11,
+    backgroundColor: COLORS.accent,
+  },
+  sheetPrimaryPressed: {
+    backgroundColor: BRAND.informatikaTerang,
+  },
+  sheetPrimaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: BRAND.tinta,
+  },
+
+  /* Notifikasi melayang */
+  toast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceRaised,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  toastIcon: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginRight: 10,
+  },
+  toastText: {
+    flex: 1,
+    fontFamily: MONO,
+    fontSize: 12,
+    color: COLORS.text,
   },
 });
