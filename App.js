@@ -14,6 +14,23 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
+// Palet resmi Universitas Insan Mahardika.
+// Warna utama aplikasi ini mengikuti Program Studi Informatika (kuning emas).
+// Varian "Terang" adalah versi lebih cerah dari warna resmi, dipakai untuk teks
+// di atas latar gelap agar tetap terbaca.
+const BRAND = {
+  informatika: '#F0B90B', // Informatika — warna utama
+  informatikaTerang: '#FFD75E',
+  fmt: '#FB7A1E', // FMT — aksen sekunder
+  fkes: '#7ED957', // FKES — hijau muda
+  psik: '#3D8B11', // PSIK — hijau
+  kesmasTerang: '#8B5BD6', // KESMAS (dicerahkan)
+  kebidananTerang: '#4DA6FF', // Kebidanan (dicerahkan)
+  rmikTerang: '#E85555', // RMIK (dicerahkan)
+  tinta: '#0a0a0f',
+  putih: '#FFFFFF',
+};
+
 // 1. DATA PERINTAH GIT (Dikelompokkan berdasarkan Kategori)
 const GIT_DATA = [
   {
@@ -363,7 +380,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#00d4aa', // Hijau neon aksen terminal
+    color: BRAND.fkes, // Hijau FKES sebagai aksen terminal
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   headerSubtitle: {
@@ -384,7 +401,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   promptSymbol: {
-    color: '#ff6b9d', // Merah muda terminal prompt
+    color: BRAND.fmt, // Oranye FMT sebagai simbol prompt
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
@@ -416,7 +433,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6c63ff', // Ungu aksen utama
+    color: BRAND.fmt, // Oranye FMT untuk judul kategori
     letterSpacing: 1,
   },
   card: {
@@ -436,7 +453,7 @@ const styles = StyleSheet.create({
   commandText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#ffbe0b', // Kuning/oranye terang kode perintah
+    color: BRAND.informatika, // Kuning Informatika untuk kode perintah
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     flex: 1,
     marginRight: 8,
@@ -462,7 +479,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyText: {
-    color: '#ef4444', // Merah peringatan
+    color: BRAND.rmikTerang, // Merah RMIK sebagai peringatan
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontSize: 13,
   },
@@ -474,13 +491,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#191a23',
   },
   bannerText: {
-    color: '#61dafb',
+    color: BRAND.kebidananTerang,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontSize: 12,
     letterSpacing: 0.7,
   },
   bannerSmall: {
-    color: '#7c3aed',
+    color: BRAND.kesmasTerang,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontSize: 10,
     marginTop: 4,
@@ -512,15 +529,17 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   categoryChipActive: {
-    backgroundColor: '#6c63ff',
-    borderColor: '#6c63ff',
+    backgroundColor: BRAND.informatika,
+    borderColor: BRAND.informatika,
   },
   categoryChipText: {
     color: '#cbd5e1',
     fontSize: 12,
   },
   categoryChipTextActive: {
-    color: '#ffffff',
+    // Teks gelap di atas chip kuning agar kontrasnya tetap tinggi
+    color: BRAND.tinta,
+    fontWeight: '700',
   },
   recentSearchesHeader: {
     flexDirection: 'row',
@@ -534,7 +553,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a2a3a',
   },
   clearHistoryText: {
-    color: '#a5b4fc',
+    color: BRAND.informatikaTerang,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -562,7 +581,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   removeRecentSearchText: {
-    color: '#f87171',
+    color: BRAND.rmikTerang,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -589,7 +608,7 @@ const styles = StyleSheet.create({
   },
   switchButtonActive: {
     backgroundColor: '#1f2937',
-    borderColor: '#6c63ff',
+    borderColor: BRAND.informatika,
   },
   switchButtonText: {
     color: '#9ca3af',
@@ -621,7 +640,7 @@ const styles = StyleSheet.create({
   otherViewCardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#7c3aed',
+    color: BRAND.kesmasTerang,
     marginBottom: 6,
   },
   otherViewCardDesc: {
@@ -645,12 +664,12 @@ const styles = StyleSheet.create({
     borderColor: '#2a2a3a',
   },
   modalTitle: {
-    color: '#9ca3ff',
+    color: BRAND.informatikaTerang,
     fontWeight: '700',
     marginBottom: 8,
   },
   modalCommand: {
-    color: '#ffbe0b',
+    color: BRAND.informatika,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontWeight: '700',
     marginBottom: 6,
@@ -678,7 +697,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(16, 185, 129, 0.95)', // Hijau sukses transparan
+    backgroundColor: 'rgba(61, 139, 17, 0.97)', // Hijau PSIK sebagai notifikasi sukses
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
